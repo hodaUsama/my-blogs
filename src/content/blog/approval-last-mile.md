@@ -1,4 +1,10 @@
-# The Approval Was Right. The Request Was Not.
+---
+title: "The Approval Was Right. The Request Was Not."
+date: 2026-11-16
+description: "Every approval check passed, yet the customer was refunded $310 instead of $120. A guest post by Hoda Osama on the last mile between an approved effect and the request a downstream system actually executes."
+cover: "/images/blog/approval-last-mile.png"
+tags: ["Agentic AI", "Human in the Loop", "Idempotency", "Reliability", "Distributed Systems"]
+---
 
 *An expansion of Part 3 of my series Agents in Production, "The Refund Was Approved. Then the Amount Changed." (https://lnkd.in/p/d2YevUxe).*
 
@@ -241,5 +247,3 @@ Hoda Osama is a Principal Software Engineer with more than 18 years in .NET and 
 - Newsletter: https://www.linkedin.com/newsletters/agents-in-production-7526642819902496768/
 - YouTube: https://www.youtube.com/@Hoda_Osama_AI
 - Blog: https://hodausama.github.io
-
-#AgenticAI #HumanInTheLoop #Idempotency #Reliability #DistributedSystems #DotNet #Azure #MicrosoftAgentFramework #AIEngineering
