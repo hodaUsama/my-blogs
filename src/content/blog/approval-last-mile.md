@@ -15,13 +15,13 @@ author:
     youtube: "https://www.youtube.com/@Hoda_Osama_AI"
 ---
 
-*An expansion of Part 3 of my series Agents in Production, "The Refund Was Approved. Then the Amount Changed." (https://lnkd.in/p/d2YevUxe).*
+Consider a hypothetical refund workflow. An AI agent handles customer refund requests, and any tool call that moves money pauses until a human approves it.
 
-Consider a hypothetical refund workflow. Order 8472 was paid with a single $310 payment. One item, worth $120, arrived damaged.
+Order 8472 was paid with a single $310 payment. One item, worth $120, arrived damaged.
 
 At 10:00, the agent proposes a partial refund. The reviewer sees the full effect: $120.00 USD, original payment method, order version 14.
 
-At 10:05, a manager approves. The approval is bound to the call, not expired, not used. Revalidation passes. Everything from Part 3 is in place.
+At 10:05, a manager approves. The approval is bound to that exact refund, not expired, not used. Just before the side effect, the tool revalidates: same order version, same amount, same policy. By the usual standard of human-in-the-loop design, this approval is done right.
 
 At 10:06, the `RefundOrder` tool builds the HTTP request to the payment service. A mapping bug leaves the amount as `null`. The JSON serializer is configured to skip nulls, so the field disappears from the payload.
 
@@ -35,9 +35,15 @@ By then, the payment service no longer remembers the key. It treats the retry as
 
 In both versions, every approval check passed. The leak was in the last mile: between the approved effect and the request the downstream system actually executed.
 
-## 1. What Part 3 already covers
+## 1. What a well-designed approval already covers
 
-Part 3 argued that a human approval must bind the business effect, not just the tool call. The approved request carries the amount, currency, destination, order version and policy version. The approval expires. And the tool revalidates the snapshot immediately before the side effect.
+A human approval is a control only if it binds the business effect, not just the name of the tool being called. In practice that means three things:
+
+- **The approved request carries the effect itself:** amount, currency, destination, order version and policy version. The reviewer approves those values, not "call `RefundOrder`".
+- **The approval expires and can be used once.** A click from yesterday cannot authorize a refund today, and one approval cannot authorize two refunds.
+- **The tool revalidates immediately before the side effect.** If the order, the amount or the policy changed since the reviewer saw them, the tool fails closed and asks for a new approval.
+
+Without these, a reviewer can approve $120 and the agent can still execute something else, because the arguments or the world changed between the click and the call.
 
 That design ends at the tool boundary. This article continues past it, to the request that leaves your process. Two more gaps sit there:
 
@@ -81,7 +87,7 @@ Task RefundAsync(string orderId, decimal? amount = null);
 await payments.RefundAsync(order.Id);   // compiles, and refunds everything
 ```
 
-So the rule from Part 3, "what you see is what you approve", needs a second half: **what you approve is what you send, field by field, with no defaults.**
+So the familiar approval rule, "what you see is what you approve", needs a second half: **what you approve is what you send, field by field, with no defaults.**
 
 ## 3. Make the missing field impossible, then check anyway
 
@@ -132,7 +138,7 @@ The conversion to minor units belongs to the approved effect too. The reviewer a
 
 ## 4. Every duplicate guard has a clock
 
-Part 1 used an idempotency key so that retries of the same refund are safe. That works only while the receiver remembers the key. Every duplicate guard I know of remembers for a limited time:
+The standard protection against duplicate side effects is an idempotency key. The caller sends a unique key with the request; when the receiver sees the same key again, it returns the original result instead of executing a second time. That makes retries of the same refund safe, but only while the receiver remembers the key. Every duplicate guard I know of remembers for a limited time:
 
 - **Azure Service Bus** duplicate detection keeps a history of message IDs for a configured window. According to Microsoft Learn, the default is 10 minutes and the maximum is 7 days. A message sent with the same `MessageId` after the window is accepted as new.
 - **Your own idempotency middleware**, if it stores keys in `IDistributedCache` or Redis with an expiration, stops protecting you the moment the entry expires.
@@ -198,7 +204,7 @@ Three notes on this design:
 
 - **Reconcile on every retry from Unknown, not only after the window.** Then the design does not depend on knowing anyone's retention period, and it keeps working when you change broker, cache or provider.
 - **Reuse the same key and the same parameters.** Inside the window, the receiver deduplicates. Outside it, the `OperationId` lets the next reconciliation find the result.
-- **Reconciliation is itself check-then-act.** Two workers can both see "not found" and both send. This is the race from Part 2, and the same answer applies: only the worker that owns the operation, with a current lease or fencing token, may reconcile and send.
+- **Reconciliation is itself check-then-act.** Two workers can both see "not found" and both send. The answer is a single owner per operation: a worker takes a lease on the operation, and before sending it moves the record to Sent with a conditional update that checks its fencing token, a number that increases with every new lease. A worker whose lease has expired fails that update and sends nothing.
 
 If the downstream system offers no way to look up past operations by your ID, that is worth knowing before you depend on it. Then the duplicate window is your only protection, and the retry policy has to stay inside it.
 
@@ -226,9 +232,9 @@ After each test, check three places: your operation record, the approval record,
 
 ## The question to ask
 
-Part 3 asked: if the world changes between the approval and the action, does the approval still hold?
+The usual approval question is: if the world changes between the approval and the action, does the approval still hold?
 
-The last mile adds one more question: **if the downstream system received only the bytes we sent, would it execute exactly what the human approved, today and 30 hours from now?**
+The last mile adds one more: **if the downstream system received only the bytes we sent, would it execute exactly what the human approved, today and 30 hours from now?**
 
 If the answer depends on a default, an untested conversion, or a key someone else may have forgotten, the approval is still a click, not a control.
 
@@ -236,7 +242,6 @@ Where in your agentic workflows does an approved value cross a mapping layer or 
 
 ## Further reading
 
-- Agents in Production, Part 3: The Refund Was Approved. Then the Amount Changed. — https://lnkd.in/p/d2YevUxe
 - Microsoft Agent Framework: Overview — https://learn.microsoft.com/en-us/agent-framework/overview/?pivots=programming-language-csharp
 - Microsoft Agent Framework: Tool approval (human in the loop) — https://learn.microsoft.com/en-us/agent-framework/agents/tools/tool-approval?pivots=programming-language-csharp
 - Microsoft Learn: How to ignore properties with System.Text.Json — https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/ignore-properties
@@ -247,3 +252,4 @@ Where in your agentic workflows does an approved value cross a mapping layer or 
 - Stripe API: Create a refund — https://docs.stripe.com/api/refunds/create
 - Stripe API: Idempotent requests — https://docs.stripe.com/api/idempotent_requests
 - Adyen: API idempotency — https://docs.adyen.com/development-resources/api-idempotency
+- Related: Agents in Production, "The Refund Was Approved. Then the Amount Changed." — https://lnkd.in/p/d2YevUxe
