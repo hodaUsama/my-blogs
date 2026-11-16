@@ -4,6 +4,15 @@ date: 2026-11-16
 description: "Every approval check passed, yet the customer was refunded $310 instead of $120. A guest post by Hoda Osama on the last mile between an approved effect and the request a downstream system actually executes."
 cover: "/images/blog/approval-last-mile.png"
 tags: ["Agentic AI", "Human in the Loop", "Idempotency", "Reliability", "Distributed Systems"]
+author:
+  name: "Hoda Osama"
+  role: "Principal Software Engineer"
+  avatar: "/images/authors/hoda-osama.jpg"
+  bio: "More than 18 years in .NET and distributed systems, and a PhD researcher at Nile University working on AI in the medical domain. She writes the LinkedIn newsletter Agents in Production, about how AI agents survive production, and publishes the Arabic YouTube series System Design بالعربي."
+  links:
+    website: "https://hodausama.github.io"
+    linkedin: "https://www.linkedin.com/in/hodaosama/"
+    youtube: "https://www.youtube.com/@Hoda_Osama_AI"
 ---
 
 *An expansion of Part 3 of my series Agents in Production, "The Refund Was Approved. Then the Amount Changed." (https://lnkd.in/p/d2YevUxe).*
@@ -238,12 +247,3 @@ Where in your agentic workflows does an approved value cross a mapping layer or 
 - Stripe API: Create a refund — https://docs.stripe.com/api/refunds/create
 - Stripe API: Idempotent requests — https://docs.stripe.com/api/idempotent_requests
 - Adyen: API idempotency — https://docs.adyen.com/development-resources/api-idempotency
-
-## About the author
-
-Hoda Osama is a Principal Software Engineer with more than 18 years in .NET and distributed systems, and a PhD researcher at Nile University working on AI in the medical domain. She writes the LinkedIn newsletter *Agents in Production*, about how AI agents survive production, and publishes the Arabic YouTube series *System Design بالعربي*.
-
-- LinkedIn: https://www.linkedin.com/in/hodaosama/
-- Newsletter: https://www.linkedin.com/newsletters/agents-in-production-7526642819902496768/
-- YouTube: https://www.youtube.com/@Hoda_Osama_AI
-- Blog: https://hodausama.github.io
